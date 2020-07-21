@@ -1,40 +1,35 @@
 package main
 
-
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"os"
 	"strings"
-	"bufio"
 )
 
-
 // Code for client variable organization TODO: make this all structs and stuff later
-var count_id int = 1	//make this a random number selector for finding client ids
+var countID int = 1 //make this a random number selector for finding client ids
 var clients = make(map[int]net.Conn)
-
 
 type client struct {
 	conn net.Conn
 	name string
-	id int
+	id   int
 }
 
-
-func broadcast(msg string){
+func broadcast(msg string) {
 	for _, v := range clients {
-		fmt.Fprintf(v, msg + "\n")
+		fmt.Fprintf(v, msg+"\n")
 	}
 }
-
 
 func handleConnection(connection net.Conn, id int) {
 	//Read in the client's username
 	netData, err := bufio.NewReader(connection).ReadString('\n')
 	if err != nil {
-			fmt.Println(err)
-			return
+		fmt.Println(err)
+		return
 	}
 	var name string = strings.TrimSpace(string(netData))
 	msg := name + " has connected"
@@ -44,7 +39,7 @@ func handleConnection(connection net.Conn, id int) {
 	// Listen for messages from the client and broadcast them to all other connected clients
 	for {
 		netData, err := bufio.NewReader(connection).ReadString('\n')
-		if err != nil {	
+		if err != nil {
 			if err.Error() == "EOF" {
 				break
 			} else {
@@ -53,22 +48,21 @@ func handleConnection(connection net.Conn, id int) {
 			}
 		}
 		//fmt.Fprintf(connection, "LOL")
-		msg = name + ": " + strings.TrimSuffix(string(netData), "\n") 
+		msg = name + ": " + strings.TrimSuffix(string(netData), "\n")
 		fmt.Println(msg)
 		broadcast(msg)
 	}
 
-	msg = name + " has disconnected"	// := not used because var msg previously declared
+	msg = name + " has disconnected" // := not used because var msg previously declared
 	fmt.Println(msg)
 	broadcast(msg)
 	connection.Close()
 	delete(clients, id)
 }
 
-
-
 func main() {
-	arguments := os.Args		
+	// Read in command line arguments
+	arguments := os.Args
 	if len(arguments) == 1 {
 		fmt.Println("Usage: prism-server [port]")
 		return
@@ -84,7 +78,6 @@ func main() {
 	fmt.Println("Server setup successful, listening for connections...")
 	defer listener.Close()
 
-	
 	// Handle new TCP connections
 	for {
 		connection, err := listener.Accept()
@@ -93,16 +86,11 @@ func main() {
 			return
 		}
 
-		go handleConnection(connection, count_id)
+		go handleConnection(connection, countID)
 		// Add client id info
-		clients[count_id] = connection
-		count_id++
-		
-
+		clients[countID] = connection
+		countID++
 
 	}
 
-
- 
 }
-
