@@ -15,11 +15,9 @@ func connect() {
 }
 
 
-func printServerMessage(connection net.Conn, key []byte, history *tui.Box) {
+func printServerMessage(connection net.Conn, key []byte, history *tui.Box, u *uiThing) {
 	defer connection.Close()
 	for {
-		var output string
-
 		// Read in data from tcp socket and put it in a Packet object
 		buf := make([]byte, 1024)	// read up to 1024 bytes into buf
 		_, err := connection.Read(buf[0:])	// read up to size of buf
@@ -34,12 +32,8 @@ func printServerMessage(connection net.Conn, key []byte, history *tui.Box) {
 		pType := netData.ReadUint8()
 		if pType != 5 { return }
 
-		// Append username of the message sender to output
 		l := netData.ReadUint8()						// read in the senderName length
 		senderName := netData.ReadString(int(l))		// read in the senderName as a string
-		if l > 0 {
-			output += senderName + ": "					// don't add senderName if it is empty
-		}
 
 		// Check if the message is encrypted
 		netData.seek = 23
@@ -54,21 +48,16 @@ func printServerMessage(connection net.Conn, key []byte, history *tui.Box) {
 			message = decrypt(message, key)
 		}
 
-		// Cast the messge to a string and add it to the output
-		output += string(message)
+		// Print message using textUI ;)
+		u.ui.Update( func(){
+			history.Append(tui.NewHBox(
+				tui.NewLabel(time.Now().Format("15:04")),
+				tui.NewPadder(1, 0, tui.NewLabel(fmt.Sprintf("<%s>", senderName))),
+				tui.NewLabel(string(message)),
+				tui.NewSpacer(),
+			))
+		})
 
-		// Print out the message!
-		// Some "fancy" terminal formatting, should really make this with curses...
-		//fmt.Print("\n") // needed cause of "\033[F" ANSI code to move cursor up
-		//fmt.Println( output)//"\033[F" + output) //message)
-
-		// Print using textUI ;)
-		history.Append(tui.NewHBox(
-			tui.NewLabel(time.Now().Format("15:04")),
-			tui.NewPadder(1, 0, tui.NewLabel(fmt.Sprintf("<%s>", senderName))),
-			tui.NewLabel(string(message)),
-			tui.NewSpacer(),
-		))
 
 	}
 }
@@ -93,13 +82,13 @@ func printServerMessage(connection net.Conn, key []byte, history *tui.Box) {
 //}
 
 
-func textUI(username string, connection net.Conn, key []byte, history *tui.Box, address string) {
-	// This is some unacceptable code down here...
+func textUI(username string, c net.Conn, key []byte, history *tui.Box, address string, u *uiThing) {
 	sidebar := tui.NewVBox(
 		tui.NewLabel("pRism v0.1   "),
 		tui.NewLabel(""),
 		tui.NewLabel("Server:"),
 		tui.NewLabel(address + " "),
+		tui.NewLabel(""),
 		tui.NewLabel("Username:"),
 		tui.NewLabel(username + " "),
 		tui.NewLabel(""),
@@ -109,7 +98,6 @@ func textUI(username string, connection net.Conn, key []byte, history *tui.Box, 
 		tui.NewSpacer(),
 	)
 	sidebar.SetBorder(false)
-	// </unacceptable_code>
 
 	historyScroll := tui.NewScrollArea(history)
 	historyScroll.SetAutoscrollToBottom(true)
@@ -135,7 +123,7 @@ func textUI(username string, connection net.Conn, key []byte, history *tui.Box, 
 		// Send message to server
 		p := NewPacket(GeneralMessage)
 		p.PrepGeneralMessage(username, msg, true)
-		p.Send(connection)
+		p.Send(c)
 
 		input.SetText("")
 	})
@@ -147,6 +135,8 @@ func textUI(username string, connection net.Conn, key []byte, history *tui.Box, 
 		log.Fatal(err)
 	}
 
+	// Pointers :(
+	u.ui = ui
 
 	ui.SetKeybinding("Esc", func() {
 		ui.Quit()
@@ -181,17 +171,30 @@ func main() {
 		return
 	}
 
-	// Init the chat history widget
+	// Init the chat history widget... and ui pointer thingy
 	history := tui.NewVBox()
+	var u uiThing
 
 	// Start the goroutine to print received messages from the server
-	go printServerMessage(connection, key, history)
+	go printServerMessage(connection, key, history, &u)
+
+	// Init the UI
+	go textUI(username, connection, key, history, ADDRESS, &u)
+
+	// Allot some time for the textUI to finish initializing... TODO CHANGE THIS
+	// Getting a packet from the server WILL CAUSE A PANIC if init takes longer than 1 second
+	time.Sleep(1 * time.Second)
 
 	// Send our username to the server
 	p := NewPacket(Initial)
 	p.PrepInitial(username)
 	p.Send(connection)
 
-	// Init the UI
-	textUI(username, connection, key, history, ADDRESS)
+	// TODO ADD SOME LEGITIMATE BLOCKING SO WE EXIT WHEN USER PRESSES ESCAPE! (or textui goroutine ends)
+	time.Sleep(1 * time.Hour)
+}
+
+// Ui : part of nasty fix for updating ui when a new message is received from the server
+type uiThing struct {
+	ui tui.UI
 }
