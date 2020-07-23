@@ -3,18 +3,13 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 	"github.com/marcusolsson/tui-go"
-	"log"
 	"time"
 )
 
 
-func connect() {
-	return
-}
 
-
+// Basically Handle the GeneralMessage packet type
 func printServerMessage(connection net.Conn, key []byte, history *tui.Box, u *uiThing) {
 	defer connection.Close()
 	for {
@@ -58,114 +53,17 @@ func printServerMessage(connection net.Conn, key []byte, history *tui.Box, u *ui
 			))
 		})
 
-
 	}
-}
-
-
-
-
-
-
-//////////////////////////// Nicer User Interface!
-
-//type post struct {
-//	username string
-//	message  string
-//	time     string
-//}
-//
-//
-//var posts = []post{
-//	{username: "john", message: "hi, what's up?", time: "14:41"},
-//	{username: "jane", message: "not much", time: "14:43"},
-//}
-
-
-func textUI(username string, c net.Conn, key []byte, history *tui.Box, address string, u *uiThing) {
-	sidebar := tui.NewVBox(
-		tui.NewLabel("pRism v0.1   "),
-		tui.NewLabel(""),
-		tui.NewLabel("Server:"),
-		tui.NewLabel(address + " "),
-		tui.NewLabel(""),
-		tui.NewLabel("Username:"),
-		tui.NewLabel(username + " "),
-		tui.NewLabel(""),
-		tui.NewLabel(""),
-		tui.NewLabel("Press esc"),
-		tui.NewLabel("to quit"),
-		tui.NewSpacer(),
-	)
-	sidebar.SetBorder(false)
-
-	historyScroll := tui.NewScrollArea(history)
-	historyScroll.SetAutoscrollToBottom(true)
-
-	historyBox := tui.NewVBox(historyScroll)
-	historyBox.SetBorder(true)
-
-	input := tui.NewEntry()
-	input.SetFocused(true)
-	input.SetSizePolicy(tui.Expanding, tui.Maximum)
-
-	inputBox := tui.NewHBox(input)
-	inputBox.SetBorder(true)
-	inputBox.SetSizePolicy(tui.Expanding, tui.Maximum)
-
-	chat := tui.NewVBox(historyBox, inputBox)
-	chat.SetSizePolicy(tui.Expanding, tui.Expanding)
-
-	input.OnSubmit(func(entry *tui.Entry) {
-		// Encrypt user text
-		msg := encrypt([]byte(entry.Text()), key)
-
-		// Send message to server
-		p := NewPacket(GeneralMessage)
-		p.PrepGeneralMessage(username, msg, true)
-		p.Send(c)
-
-		input.SetText("")
-	})
-
-	root := tui.NewHBox(sidebar, chat)
-
-	ui, err := tui.New(root)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Pointers :(
-	u.ui = ui
-
-	ui.SetKeybinding("Esc", func() {
-		ui.Quit()
-	})
-
-	if err := ui.Run(); err != nil {
-		log.Fatal(err)
-	}
-
 }
 
 
 
 func main() {
-	// Get command line arguments
-	arguments := os.Args
-	if len(arguments) == 1 {
-		fmt.Println("Usage: prism-client [username] [server] [port]")
-		fmt.Println("Example: prism-client Anon 192.168.0.1 201")
-		return
-	}
-	var username string = arguments[1]
-	var k string = arguments[4]
-	key := []byte(k)
+	// Get login information from the login UI
+	address, username, key := loginUI()
 
-	// Open a TCP connection to the server
-	ADDRESS := arguments[2] + ":" + arguments[3]
-
-	connection, err := net.Dial("tcp", ADDRESS)
+	// Open a TCP connection to the server 			//TODOmaybe put this in the loginUI?
+	connection, err := net.Dial("tcp", address)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -178,11 +76,11 @@ func main() {
 	// Start the goroutine to print received messages from the server
 	go printServerMessage(connection, key, history, &u)
 
-	// Init the UI
-	go textUI(username, connection, key, history, ADDRESS, &u)
+	// Init the chat UI
+	go chatUI(username, connection, key, history, address, &u)
 
 	// Allot some time for the textUI to finish initializing... TODO CHANGE THIS
-	// Getting a packet from the server WILL CAUSE A PANIC if init takes longer than 1 second
+	// Getting data from the server WILL CAUSE A PANIC if chatUI init does not finish before then!
 	time.Sleep(1 * time.Second)
 
 	// Send our username to the server
@@ -193,6 +91,7 @@ func main() {
 	// TODO ADD SOME LEGITIMATE BLOCKING SO WE EXIT WHEN USER PRESSES ESCAPE! (or textui goroutine ends)
 	time.Sleep(1 * time.Hour)
 }
+
 
 // Ui : part of nasty fix for updating ui when a new message is received from the server
 type uiThing struct {
