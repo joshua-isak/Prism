@@ -1,10 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"net"
 	"os"
+	"github.com/marcusolsson/tui-go"
+	"log"
+	"time"
 )
 
 
@@ -13,7 +15,7 @@ func connect() {
 }
 
 
-func printServerMessage(connection net.Conn, key []byte) {
+func printServerMessage(connection net.Conn, key []byte, history *tui.Box) {
 	defer connection.Close()
 	for {
 		var output string
@@ -57,9 +59,103 @@ func printServerMessage(connection net.Conn, key []byte) {
 
 		// Print out the message!
 		// Some "fancy" terminal formatting, should really make this with curses...
-		fmt.Print("\n") // needed cause of "\033[F" ANSI code to move cursor up
-		fmt.Println( output)//"\033[F" + output) //message)
+		//fmt.Print("\n") // needed cause of "\033[F" ANSI code to move cursor up
+		//fmt.Println( output)//"\033[F" + output) //message)
+
+		// Print using textUI ;)
+		history.Append(tui.NewHBox(
+			tui.NewLabel(time.Now().Format("15:04")),
+			tui.NewPadder(1, 0, tui.NewLabel(fmt.Sprintf("<%s>", senderName))),
+			tui.NewLabel(string(message)),
+			tui.NewSpacer(),
+		))
+
 	}
+}
+
+
+
+
+
+
+//////////////////////////// Nicer User Interface!
+
+//type post struct {
+//	username string
+//	message  string
+//	time     string
+//}
+//
+//
+//var posts = []post{
+//	{username: "john", message: "hi, what's up?", time: "14:41"},
+//	{username: "jane", message: "not much", time: "14:43"},
+//}
+
+
+func textUI(username string, connection net.Conn, key []byte, history *tui.Box, address string) {
+	// This is some unacceptable code down here...
+	sidebar := tui.NewVBox(
+		tui.NewLabel("pRism v0.1   "),
+		tui.NewLabel(""),
+		tui.NewLabel("Server:"),
+		tui.NewLabel(address + " "),
+		tui.NewLabel("Username:"),
+		tui.NewLabel(username + " "),
+		tui.NewLabel(""),
+		tui.NewLabel(""),
+		tui.NewLabel("Press esc"),
+		tui.NewLabel("to quit"),
+		tui.NewSpacer(),
+	)
+	sidebar.SetBorder(false)
+	// </unacceptable_code>
+
+	historyScroll := tui.NewScrollArea(history)
+	historyScroll.SetAutoscrollToBottom(true)
+
+	historyBox := tui.NewVBox(historyScroll)
+	historyBox.SetBorder(true)
+
+	input := tui.NewEntry()
+	input.SetFocused(true)
+	input.SetSizePolicy(tui.Expanding, tui.Maximum)
+
+	inputBox := tui.NewHBox(input)
+	inputBox.SetBorder(true)
+	inputBox.SetSizePolicy(tui.Expanding, tui.Maximum)
+
+	chat := tui.NewVBox(historyBox, inputBox)
+	chat.SetSizePolicy(tui.Expanding, tui.Expanding)
+
+	input.OnSubmit(func(entry *tui.Entry) {
+		// Encrypt user text
+		msg := encrypt([]byte(entry.Text()), key)
+
+		// Send message to server
+		p := NewPacket(GeneralMessage)
+		p.PrepGeneralMessage(username, msg, true)
+		p.Send(connection)
+
+		input.SetText("")
+	})
+
+	root := tui.NewHBox(sidebar, chat)
+
+	ui, err := tui.New(root)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+
+	ui.SetKeybinding("Esc", func() {
+		ui.Quit()
+	})
+
+	if err := ui.Run(); err != nil {
+		log.Fatal(err)
+	}
+
 }
 
 
@@ -85,26 +181,17 @@ func main() {
 		return
 	}
 
+	// Init the chat history widget
+	history := tui.NewVBox()
+
+	// Start the goroutine to print received messages from the server
+	go printServerMessage(connection, key, history)
+
 	// Send our username to the server
 	p := NewPacket(Initial)
 	p.PrepInitial(username)
 	p.Send(connection)
 
-	// Goroutine to print received messages from the server
-	go printServerMessage(connection, key)
-
-	for {
-		// Read in user text
-		reader := bufio.NewReader(os.Stdin)
-		text, _ := reader.ReadString('\n')
-
-		// Encrypt user text
-		msg := encrypt([]byte(text), key)
-
-		// Send message to server
-		p := NewPacket(GeneralMessage)
-		p.PrepGeneralMessage(username, msg, true)
-		p.Send(connection)
-	}
-
+	// Init the UI
+	textUI(username, connection, key, history, ADDRESS)
 }
