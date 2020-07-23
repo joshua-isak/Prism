@@ -55,8 +55,8 @@ func handleConnection(connection net.Conn, id int) {
 			if err.Error() == "EOF"{
 				break
 			}
-			fmt.Println(err)
-			return
+			fmt.Println("other err", err)
+			break
 		}
 		netData := NewPacket(Received)
 		netData.data = buf
