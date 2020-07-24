@@ -14,7 +14,10 @@ type PacketType int
 
 // see above
 const (
- 	Initial PacketType = 1
+	Initial PacketType = 1
+	Welcome PacketType = 2
+	ClientConnect PacketType = 3
+	ClientDisconnect PacketType = 4
 	GeneralMessage PacketType = 5
 	Received PacketType = 255
 )
@@ -46,6 +49,39 @@ func NewPacket(t PacketType) Packet {
 
 // PrepInitial : prepare the "Inital" packet type
 func (p *Packet) PrepInitial(username string) {
+	// Write in the len of the username then the username
+	p.data = append(p.data, uint8(len(username)))
+	p.data = append(p.data, []byte(username)...)
+}
+
+
+// PrepWelcome : prepare the "Welcome" packet type
+func (p *Packet) PrepWelcome(clients map[string]net.Conn) {
+	// Length of map clients
+	l := len(clients)
+
+	// Write in the number of connected clients
+	p.data = append(p.data, uint8(l))
+
+	// Loop over connected clients in map clients and write them to the packet
+	for username := range clients {
+		// Write in the len of the username then the username
+		p.data = append(p.data, uint8(len(username)))
+		p.data = append(p.data, []byte(username)...)
+	}
+}
+
+
+// PrepClientConnect : prepare the ClientConnect packet type
+func (p *Packet) PrepClientConnect(username string) {
+	// Write in the len of the username then the username
+	p.data = append(p.data, uint8(len(username)))
+	p.data = append(p.data, []byte(username)...)
+}
+
+
+// PrepClientDisconnect : prepare the ClientDisconnect packet type
+func (p *Packet) PrepClientDisconnect(username string) {
 	// Write in the len of the username then the username
 	p.data = append(p.data, uint8(len(username)))
 	p.data = append(p.data, []byte(username)...)
@@ -90,10 +126,11 @@ func (p *Packet) Send(c net.Conn) {
 
 
 // Broadcast : sends packets to all connections in map m
-func (p *Packet) Broadcast(m map[int]net.Conn ) {
+func (p *Packet) Broadcast(m map[string]net.Conn ) {
 	for _, connection := range m {
 		p.Send(connection)
 	}
+	p.PrintDataHex()
 }
 
 

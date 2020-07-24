@@ -28,7 +28,7 @@ func loginUI() (string, string, []byte){
 	key.SetEchoMode(tui.EchoModePassword)
 
 	form := tui.NewGrid(0, 0)
-	form.AppendRow(tui.NewLabel("IP"), tui.NewLabel("Username"), tui.NewLabel("32-Byte Key"))
+	form.AppendRow(tui.NewLabel("IP Address"), tui.NewLabel("Username"), tui.NewLabel("32-Byte Key"))
 	form.AppendRow(server, user, key)
 
 	status := tui.NewStatusBar("Ready. Press esc to quit")
@@ -78,6 +78,9 @@ func loginUI() (string, string, []byte){
 			login.SetFocused(false)
 			return
 		}
+
+		//Use a predefined key if 'debug' in input into the key field, ignores check below
+		if key.Text() == "debug" { key.SetText("jjjjjjjjkkkkkkkkhhhhhhhhiiiiiiii") }
 
 		// Make sure the key is 32 bytes long
 		if len(key.Text()) != 32 {

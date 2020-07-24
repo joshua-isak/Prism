@@ -14,7 +14,10 @@ type PacketType int
 
 // see above
 const (
- 	Initial PacketType = 1
+	Initial PacketType = 1
+	Welcome PacketType = 2
+	ClientConnect PacketType = 3
+	ClientDisconnect PacketType = 4
 	GeneralMessage PacketType = 5
 	Received PacketType = 255
 )

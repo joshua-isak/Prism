@@ -4,6 +4,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"time"
 	//"os"
 )
 
@@ -13,7 +14,7 @@ var PORT string = "14296"
 
 // Code for client variable organization TODO: make this all structs and stuff later
 var countID int = 1 //make this a random number selector for finding client ids
-var clients = make(map[int]net.Conn)
+var clients = make(map[string]net.Conn)
 
 type client struct {
 	conn net.Conn
@@ -47,14 +48,25 @@ func handleConnection(connection net.Conn, id int) {
 	l :=  int(buf[1]) 			// read in the username length
 	name := string(buf[2:2+l])	// read l bytes from start of name turn that into a string
 
-	// Tell all clients a user has connected
-	msg := name + " has connected"
-	p := NewPacket(GeneralMessage)
-	p.PrepGeneralMessage("", []byte(msg), false)
-	p.Broadcast(clients)
-	//p.PrintDataHex()
+	// Send the Welcome packet to the client
+	w := NewPacket(Welcome)
+	w.PrepWelcome(clients)
+	w.PrintDataHex()
+	w.Send(connection)
 
-	fmt.Println(msg)
+	// Add the client to the clients map
+	clients[name] = connection
+
+	// Temporary fix due to the fact that the client reads too many bytes from the tcp socket!!!!!!!!!
+	time.Sleep(1 * time.Second)
+
+	// Tell all clients a user has connected
+	cC := NewPacket(ClientConnect)
+	cC.PrepClientConnect(name)
+	cC.Broadcast(clients)
+	//cC.PrintDataHex()
+
+	fmt.Println(name + " has connected")
 
 	// Listen for messages from the client and broadcast them to all other connected clients
 	for {
@@ -87,6 +99,7 @@ func handleConnection(connection net.Conn, id int) {
 		// Broadcast this received message to all other connected clients
 		p := NewPacket(GeneralMessage)
 		p.PrepGeneralMessage(name, message, true)
+		//p.PrintDataHex()
 		p.Broadcast(clients)
 
 		fmt.Println(name + ": --ENCRYPTED--")
@@ -94,15 +107,24 @@ func handleConnection(connection net.Conn, id int) {
 	}
 
 	// Handle the TCP connection closing
-	msg = name + " has disconnected" // := not used because var msg previously declared
-	fmt.Println(msg)
+	//msg := name + " has disconnected" // := not used because var msg previously declared
+	//fmt.Println(msg)
 
-	p2 := NewPacket(GeneralMessage)
-	p2.PrepGeneralMessage("", []byte(msg), false)
-	p2.Broadcast(clients)
+	//p2 := NewPacket(GeneralMessage)
+	//p2.PrepGeneralMessage("", []byte(msg), false)
+	//p2.Broadcast(clients)
 
 	connection.Close()
-	delete(clients, id)
+	delete(clients, name)
+
+	// Tell all clients a user has disconnected
+	cD := NewPacket(ClientDisconnect)
+	cD.PrepClientConnect(name)
+	cD.Broadcast(clients)
+
+	fmt.Println(name + " has disconnected")
+
+
 }
 
 
@@ -116,7 +138,7 @@ func main() {
 
 	// Listen for new TCP connections
 	//PORT := ":" + arguments[1]
-	listener, err := net.Listen("tcp", PORT)
+	listener, err := net.Listen("tcp", ":" + PORT)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -134,8 +156,8 @@ func main() {
 
 		go handleConnection(connection, countID)
 		// Add client id info
-		clients[countID] = connection
-		countID++
+		//clients[countID] = connection
+		//countID++
 
 	}
 

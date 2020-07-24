@@ -7,22 +7,25 @@ import (
 )
 
 
-func chatUI(username string, c net.Conn, key []byte, history *tui.Box, address string, u *uiThing) {
+func chatUI(username string, c net.Conn, key []byte, history *tui.Box, users *tui.List, address string, u *uiThing) {
+	//users := tui.NewList()
+	//users.AddItems("hi", "bye", "hi", "hi","hi","hi","hi","hi")
+	//users.RemoveItem(2)
+
 	sidebar := tui.NewVBox(
-		tui.NewLabel("Prism " + VERSION),
-		tui.NewLabel(""),
-		tui.NewLabel("Server:"),
-		tui.NewLabel(address + " "),
-		tui.NewLabel(""),
-		tui.NewLabel("Username:"),
-		tui.NewLabel(username + " "),
-		tui.NewLabel(""),
-		tui.NewLabel(""),
-		tui.NewLabel("Press esc"),
-		tui.NewLabel("to quit"),
+		//tui.NewLabel(" CONNECTED: "),
+		tui.NewPadder(1, 0, tui.NewLabel(" CONNECTED: ")),
+		//tui.NewPadder(1, 0, tui.NewLabel("")),
+		tui.NewPadder(1, 1, users),
 		tui.NewSpacer(),
+
+		//tui.NewPadder(1, 0, users),
+		//users,
 	)
-	sidebar.SetBorder(false)
+	sidebar.SetBorder(true)
+
+	// TEST
+	topInfo := tui.NewStatusBar("  Prism goClient " + VERSION + "  |  Server: " + address + "  |  Username: " + username + "  |  " +  "Press esc to quit")
 
 	historyScroll := tui.NewScrollArea(history)
 	historyScroll.SetAutoscrollToBottom(true)
@@ -60,6 +63,7 @@ func chatUI(username string, c net.Conn, key []byte, history *tui.Box, address s
 	})
 
 	root := tui.NewHBox(sidebar, chat)
+	root = tui.NewVBox(topInfo, root)
 
 	ui, err := tui.New(root)
 	if err != nil {
