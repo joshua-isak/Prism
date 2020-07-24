@@ -8,6 +8,11 @@ import (
 	"errors"
 )
 
+// VERSION :  version number of build
+var VERSION string = "v0.1.1 "
+
+// PORT : Port to listen for new connection on
+var PORT string = "14296"
 
 
 // Basically Handle the GeneralMessage packet type
@@ -63,7 +68,7 @@ func main() {
 	address, username, key := loginUI()
 
 	// Open a TCP connection to the server 			//TODOmaybe put this in the loginUI?
-	connection, err := net.Dial("tcp", address)
+	connection, err := net.Dial("tcp", address + ":" + PORT)
 	if err != nil {
 		fmt.Println(err)
 		return

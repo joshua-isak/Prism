@@ -4,8 +4,11 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
+	//"os"
 )
+
+// PORT : Port to listen for new connection on
+var PORT string = "14296"
 
 
 // Code for client variable organization TODO: make this all structs and stuff later
@@ -105,14 +108,14 @@ func handleConnection(connection net.Conn, id int) {
 
 func main() {
 	// Read in command line arguments
-	arguments := os.Args
-	if len(arguments) == 1 {
-		fmt.Println("Usage: prism-server [port]")
-		return
-	}
+	//arguments := os.Args
+	//if len(arguments) == 1 {
+	//	fmt.Println("Usage: prism-server [port]")
+	//	return
+	//}
 
 	// Listen for new TCP connections
-	PORT := ":" + arguments[1]
+	//PORT := ":" + arguments[1]
 	listener, err := net.Listen("tcp", PORT)
 	if err != nil {
 		fmt.Println(err)

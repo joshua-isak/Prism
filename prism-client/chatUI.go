@@ -9,7 +9,7 @@ import (
 
 func chatUI(username string, c net.Conn, key []byte, history *tui.Box, address string, u *uiThing) {
 	sidebar := tui.NewVBox(
-		tui.NewLabel("pRism v0.1   "),
+		tui.NewLabel("Prism " + VERSION),
 		tui.NewLabel(""),
 		tui.NewLabel("Server:"),
 		tui.NewLabel(address + " "),

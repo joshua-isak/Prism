@@ -14,7 +14,7 @@ $$  ____/ $$ |  \__|$$ |\$$$$$$\  $$ / $$ / $$ |
 $$ |      $$ |      $$ | \____$$\ $$ | $$ | $$ |
 $$ |      $$ |      $$ |$$$$$$$  |$$ | $$ | $$ |
 \__|      \__|      \__|\_______/ \__| \__| \__|
-                                   client v0.1`
+ by joshua-isak                     client ` + VERSION
 
 
 func loginUI() (string, string, []byte){
@@ -28,7 +28,7 @@ func loginUI() (string, string, []byte){
 	key.SetEchoMode(tui.EchoModePassword)
 
 	form := tui.NewGrid(0, 0)
-	form.AppendRow(tui.NewLabel("IP:Port"), tui.NewLabel("Username"), tui.NewLabel("32-Byte Key"))
+	form.AppendRow(tui.NewLabel("IP"), tui.NewLabel("Username"), tui.NewLabel("32-Byte Key"))
 	form.AppendRow(server, user, key)
 
 	status := tui.NewStatusBar("Ready. Press esc to quit")
