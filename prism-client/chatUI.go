@@ -64,7 +64,7 @@ func chatUI(username string, c net.Conn, key []byte, history *tui.Box, address s
 	u.ui = ui
 
 	ui.SetKeybinding("Esc", func() {
-		ui.Quit()
+		c.Close()
 	})
 
 	if err := ui.Run(); err != nil {

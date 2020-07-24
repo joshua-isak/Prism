@@ -5,27 +5,27 @@ import (
 	"net"
 	"github.com/marcusolsson/tui-go"
 	"time"
+	"errors"
 )
 
 
 
 // Basically Handle the GeneralMessage packet type
-func printServerMessage(connection net.Conn, key []byte, history *tui.Box, u *uiThing) {
+func printServerMessage(connection net.Conn, key []byte, history *tui.Box, u *uiThing) error {
 	defer connection.Close()
 	for {
 		// Read in data from tcp socket and put it in a Packet object
 		buf := make([]byte, 1024)	// read up to 1024 bytes into buf
 		_, err := connection.Read(buf[0:])	// read up to size of buf
 		if err != nil {
-			fmt.Println(err)
-			return
+			return err
 		}
 		netData := NewPacket(Received)
 		netData.data = buf
 
 		// Close connection if server didn't send a GeneralMessage PacketType
 		pType := netData.ReadUint8()
-		if pType != 5 { return }
+		if pType != 5 { return errors.New("Server sent bad data (GeneralMessage)") }
 
 		l := netData.ReadUint8()						// read in the senderName length
 		senderName := netData.ReadString(int(l))		// read in the senderName as a string
@@ -73,14 +73,11 @@ func main() {
 	history := tui.NewVBox()
 	var u uiThing
 
-	// Start the goroutine to print received messages from the server
-	go printServerMessage(connection, key, history, &u)
-
 	// Init the chat UI
 	go chatUI(username, connection, key, history, address, &u)
 
-	// Allot some time for the textUI to finish initializing... TODO CHANGE THIS
-	// Getting data from the server WILL CAUSE A PANIC if chatUI init does not finish before then!
+	// Give some time for chatUI to initialize
+	// chat UI not finishing init before printServerMessage runs WILL CAUSE A PANIC
 	time.Sleep(1 * time.Second)
 
 	// Send our username to the server
@@ -88,8 +85,17 @@ func main() {
 	p.PrepInitial(username)
 	p.Send(connection)
 
-	// TODO ADD SOME LEGITIMATE BLOCKING SO WE EXIT WHEN USER PRESSES ESCAPE! (or textui goroutine ends)
-	time.Sleep(1 * time.Hour)
+	// Handle GeneralMessage packets from the server
+	// This function blocks until the connection to the server is closed
+	err = printServerMessage(connection, key, history, &u)
+
+	// Close the chat UI
+	u.ui.Quit()
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
 }
 
 
