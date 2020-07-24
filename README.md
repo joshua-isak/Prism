@@ -7,14 +7,30 @@ An End to End encrypted chat room written in go with a custom communication prot
 Simply download the binary relevant to your operating system and run it!
 Enter the server IP address and a username of your choice. You'll also need a 32-Byte key that other people in the server have in order to see their messages. Only clients with the same 32-Byte key can decrypt each other's messages.
 
+Alongside a client you'll of course need a server to connect to. Be sure to grab a server binary as well if you need one. Do note that the Prism server runs on tcp port 14296.
+
+## Downloads
+
+#### Client
+
+[Windows 10 64-bit](https://github.com/joshua-isak/Prism/blob/master/prism-client/prism-client.exe)
+
+[Linux 64-bit](https://github.com/joshua-isak/Prism/blob/master/prism-client/prism-client)
+
+#### Server
+
+[Linux 64-bit](https://github.com/joshua-isak/Prism/blob/master/prism-server/prism-server)
+
 ## Prism Protocol
 
-Prism Protocol (PP) is a low level application protocol built on top of TCP that governs communications between Prism servers and clients.
+Prism Protocol (PP) is a low level application layer protocol built on top of TCP that governs communication between Prism servers and clients.
 
 PP uses the concept of "packet types" to divide communications into discrete functions. The currently implemented "packet types" are as follows:
 
 - Initial
 - Welcome
+- ClientConnect
+- ClientDisconnect
 - General Message
 
 ### Initial [1]
@@ -58,7 +74,7 @@ When a new client connects to the server, the server sends a ClientConnect packe
 | 1 | The length of the username (uint8) |
 | 2 to 22 | The username encoded in UTF-8 |
 
-### ClientDisconnect [3]
+### ClientDisconnect [4]
 
 When a client disconnects from the server, the server sends a ClientDisconnect packet to inform each connected client that a client has disconnected. Packet structure is the same as ClientConnect, albeit with a different value for the first byte.
 

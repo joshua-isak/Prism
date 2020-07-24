@@ -54,11 +54,11 @@ func handleConnection(connection net.Conn, id int) {
 	w.PrintDataHex()
 	w.Send(connection)
 
-	// Add the client to the clients map
-	clients[name] = connection
-
 	// Temporary fix due to the fact that the client reads too many bytes from the tcp socket!!!!!!!!!
 	time.Sleep(1 * time.Second)
+
+	// Add the client to the clients map
+	clients[name] = connection
 
 	// Tell all clients a user has connected
 	cC := NewPacket(ClientConnect)
