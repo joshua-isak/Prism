@@ -42,8 +42,14 @@ func chatUI(username string, c net.Conn, key []byte, history *tui.Box, address s
 	chat.SetSizePolicy(tui.Expanding, tui.Expanding)
 
 	input.OnSubmit(func(entry *tui.Entry) {
+		// Truncate messages longer than 200
+		msg := []byte(entry.Text())
+		if len(msg) > 200 {
+			msg = msg[0:199]
+		}
+
 		// Encrypt user text
-		msg := encrypt([]byte(entry.Text()), key)
+		msg = encrypt(msg , key)
 
 		// Send message to server
 		p := NewPacket(GeneralMessage)
