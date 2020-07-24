@@ -34,6 +34,13 @@ func handleConnection(connection net.Conn, id int) {
 		fmt.Println(err)
 		return
 	}
+
+	// Close the connection if the client doesn't respond with the "Initial" packet type
+	if buf[0] != 1 {
+		connection.Close()
+		fmt.Println("client sent bad data (Initial)")
+	}
+
 	l :=  int(buf[1]) 			// read in the username length
 	name := string(buf[2:2+l])	// read l bytes from start of name turn that into a string
 
@@ -58,6 +65,14 @@ func handleConnection(connection net.Conn, id int) {
 			fmt.Println("other err", err)
 			break
 		}
+
+		// Close the connection if the client doesn't respond with the "GeneralMessage" packet type
+		if buf[0] != 5 {
+			connection.Close()
+			fmt.Println("client sent bad data (GeneralMessage)")
+			break
+		}
+
 		netData := NewPacket(Received)
 		netData.data = buf
 
