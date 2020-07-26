@@ -3,10 +3,11 @@ package main
 
 import (
 	//"bufio"
-	//"encoding/binary"
+	"encoding/binary"
 	"fmt"
 	"net"
 	"encoding/hex"
+	//"errors"
 )
 
 // PacketType :  enumeration for packet types
@@ -55,6 +56,39 @@ func (p *Packet) PrepInitial(username string) {
 }
 
 
+// PrepWelcome : prepare the "Welcome" packet type
+func (p *Packet) PrepWelcome(clients map[string]net.Conn) {
+	// Length of map clients
+	l := len(clients)
+
+	// Write in the number of connected clients
+	p.data = append(p.data, uint8(l))
+
+	// Loop over connected clients in map clients and write them to the packet
+	for username := range clients {
+		// Write in the len of the username then the username
+		p.data = append(p.data, uint8(len(username)))
+		p.data = append(p.data, []byte(username)...)
+	}
+}
+
+
+// PrepClientConnect : prepare the ClientConnect packet type
+func (p *Packet) PrepClientConnect(username string) {
+	// Write in the len of the username then the username
+	p.data = append(p.data, uint8(len(username)))
+	p.data = append(p.data, []byte(username)...)
+}
+
+
+// PrepClientDisconnect : prepare the ClientDisconnect packet type
+func (p *Packet) PrepClientDisconnect(username string) {
+	// Write in the len of the username then the username
+	p.data = append(p.data, uint8(len(username)))
+	p.data = append(p.data, []byte(username)...)
+}
+
+
 // PrepGeneralMessage : prepare the "GeneralMessage" packet type
 func (p *Packet) PrepGeneralMessage(username string, message []byte, encrypted bool) {
 	// Write in the len of the username then the username
@@ -74,7 +108,7 @@ func (p *Packet) PrepGeneralMessage(username string, message []byte, encrypted b
 }
 
 
-// PrintData : prints out packet data
+// PrintData : prints out packet data as an array of bytes (values 0-255)
 func (p *Packet) PrintData() {
 	fmt.Println( p.data)
 }
@@ -86,14 +120,19 @@ func (p *Packet) PrintDataHex() {
 }
 
 
-// Send : writes packet buffer to tcp socket to send
+// Send : writes Packet.data to tcp connection c
 func (p *Packet) Send(c net.Conn) {
+	// Prepend the length of p.data to p.data
+	len := uint16(len(p.data))
+	p.data = append(make([]byte, 2), p.data...)
+	binary.BigEndian.PutUint16(p.data, len)
+
 	c.Write(p.data)
 }
 
 
 // Broadcast : sends packets to all connections in map m
-func (p *Packet) Broadcast(m map[int]net.Conn ) {
+func (p *Packet) Broadcast(m map[string]net.Conn ) {
 	for _, connection := range m {
 		p.Send(connection)
 	}
@@ -121,14 +160,14 @@ func (p *Packet) ReadUint8() uint8 {
 }
 
 
-// ReadString : Read len bytes from p.data and output them as a string then update p.seek
-func (p *Packet) ReadString(len int) string {
-	if len < 1 {
+// ReadString : Read n bytes from p.data and output them as a string then update p.seek
+func (p *Packet) ReadString(n int) string {
+	if n < 1 {
 		return ""
 	}
 
 	start := p.seek
-	end := start + len
+	end := start + n
 	output := p.data[start:end]
 
 	p.seek = end
@@ -151,4 +190,30 @@ func (p *Packet) ReadBool() bool {
 	}
 
 	return output
+}
+
+// ReadSocket : read in data from the tcp socket and return a new packet
+func ReadSocket(connection net.Conn) (Packet, error) {
+	p := NewPacket(Received)
+
+	// Read in the packet size
+	pSize := make([]byte, 2)
+	_, err := connection.Read(pSize[0:])
+	if err != nil {
+		return p , err
+	}
+
+	len := binary.BigEndian.Uint16(pSize)
+
+	// Read in len bytes (size of packet) from socket
+	netData := make([]byte, len)
+	_, err = connection.Read(netData[0:])
+	if err != nil {
+		return p , err
+	}
+
+	p.data = netData
+
+	return p, nil
+
 }

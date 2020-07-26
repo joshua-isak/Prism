@@ -9,7 +9,7 @@ import (
 )
 
 // VERSION :  version number of build
-var VERSION string = "v0.2 "
+var VERSION string = "v0.3 "
 
 // PORT : Port to listen for new connection on
 var PORT string = "14296"
@@ -174,13 +174,10 @@ func Connection(conn net.Conn, clients map[string]string, k []byte, username str
 	// Listen for and handle packets received from the server
 	for {
 		// Read in data from tcp socket and put it in a Packet object
-		buf := make([]byte, 256)		// read up to 256 bytes into buf
-		_, err := conn.Read(buf[0:])	// read up to size of buf
+		p, err := ReadSocket(conn)
 		if err != nil {
 			return err
 		}
-		p := NewPacket(Received)
-		p.data = buf
 
 		// Handle this packet based on the packet type
 		pType := PacketType(p.data[0])

@@ -4,11 +4,9 @@ package main
 import (
 	"fmt"
 	"net"
-	"time"
-	//"os"
 )
 
-// PORT : Port to listen for new connection on
+// PORT : Port to listen for new connections on
 var PORT string = "14296"
 
 
@@ -32,46 +30,43 @@ func broadcast(msg string) {
 
 func handleConnection(connection net.Conn, id int) {
 	//Read in the client's username (handle "Initial" packet)
-	buf := make([]byte, 256)	// read up to 256 bytes into buf
-	_, err := connection.Read(buf[0:])	// read up to size of buf
+	i, err := ReadSocket(connection)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	// Close the connection if the client doesn't respond with the "Initial" packet type
-	if buf[0] != 1 {
+	if i.data[0] != 1 {
 		connection.Close()
 		fmt.Println("client sent bad data (Initial)")
 	}
 
-	l :=  int(buf[1]) 			// read in the username length
-	name := string(buf[2:2+l])	// read l bytes from start of name turn that into a string
+	l :=  int(i.data[1]) 			// read in the username length
+	name := string(i.data[2:2+l])	// read l bytes from start of name turn that into a string
+
+	// Check if the client's username is already in use
 
 	// Send the Welcome packet to the client
 	w := NewPacket(Welcome)
 	w.PrepWelcome(clients)
-	w.PrintDataHex()
 	w.Send(connection)
-
-	// Temporary fix due to the fact that the client reads too many bytes from the tcp socket!!!!!!111
-	time.Sleep(1 * time.Second)
 
 	// Add the client to the clients map
 	clients[name] = connection
 
 	// Tell all clients a user has connected
-	cC := NewPacket(ClientConnect)
-	cC.PrepClientConnect(name)
-	cC.Broadcast(clients)
+	c := NewPacket(ClientConnect)
+	c.PrepClientConnect(name)
+	c.Broadcast(clients)
 
-	fmt.Println(name + " has connected")
+	fmt.Println(name + " has connected from " + connection.RemoteAddr().String() )
 
 	// Listen for messages from the client and broadcast them to all other connected clients
 	for {
 		// Read in data from tcp socket and put it in a Packet object
-		buf := make([]byte, 512)	// read up to 512 bytes into buf
-		_, err := connection.Read(buf[0:])	// read up to size of buf
+		m, err := ReadSocket(connection)
+
 		if err != nil {
 			if err.Error() == "EOF"{
 				break
@@ -81,14 +76,14 @@ func handleConnection(connection net.Conn, id int) {
 		}
 
 		// Close the connection if the client doesn't respond with the "GeneralMessage" packet type
-		if PacketType(buf[0]) != GeneralMessage {
+		if PacketType(m.data[0]) != GeneralMessage {
 			connection.Close()
 			fmt.Println("client sent bad data (GeneralMessage)")
 			break
 		}
 
 		netData := NewPacket(Received)
-		netData.data = buf
+		netData.data = m.data
 
 		// Read in the possibly encrypted message
 		netData.seek = 24		// Move reader to byte 24 of netData.data
@@ -104,14 +99,14 @@ func handleConnection(connection net.Conn, id int) {
 
 	}
 
-	// Handle the TCP connection closing
+	// Close the tcp connection and remove the client from the clients map
 	connection.Close()
 	delete(clients, name)
 
 	// Tell all clients a user has disconnected
-	cD := NewPacket(ClientDisconnect)
-	cD.PrepClientConnect(name)
-	cD.Broadcast(clients)
+	d := NewPacket(ClientDisconnect)
+	d.PrepClientConnect(name)
+	d.Broadcast(clients)
 
 	fmt.Println(name + " has disconnected")
 
