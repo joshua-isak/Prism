@@ -36,6 +36,11 @@ func chatUI(username string, c net.Conn, key []byte, history *tui.Box, users *tu
 	chat.SetSizePolicy(tui.Expanding, tui.Expanding)
 
 	input.OnSubmit(func(entry *tui.Entry) {
+		// Don't bother with empty messages (#Spam prevention, thanks Max)
+		if entry.Text() == "" {
+			return
+		}
+
 		// Truncate messages longer than 200
 		msg := []byte(entry.Text())
 		if len(msg) > 200 {
