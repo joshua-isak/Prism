@@ -17,9 +17,10 @@ type PacketType int
 const (
 	Initial PacketType = 1
 	Welcome PacketType = 2
-	ClientConnect PacketType = 3
-	ClientDisconnect PacketType = 4
-	GeneralMessage PacketType = 5
+	ServerDisconnect PacketType = 3
+	ClientConnect PacketType = 5
+	ClientDisconnect PacketType = 6
+	GeneralMessage PacketType = 20
 	Received PacketType = 255
 )
 
@@ -72,6 +73,16 @@ func (p *Packet) PrepWelcome(clients map[string]net.Conn) {
 	}
 }
 
+// PrepServerDisconnect : prepare the "ServerDisconnect" packet type
+func (p *Packet) PrepServerDisconnect (code int, reason string) {
+	// Write the disconnect reason code
+	p.data = append(p.data, uint8(code))
+
+	// Write the disconnect reason as a string
+	p.data = append(p.data, uint8(len(reason)))
+	p.data = append(p.data, []byte(reason)...)
+}
+
 
 // PrepClientConnect : prepare the ClientConnect packet type
 func (p *Packet) PrepClientConnect(username string) {
@@ -120,14 +131,14 @@ func (p *Packet) PrintDataHex() {
 }
 
 
-// Send : writes Packet.data to tcp connection c
+// Send : writes len(p.data) + p.data to tcp connection c
 func (p *Packet) Send(c net.Conn) {
-	// Prepend the length of p.data to p.data
+	// Prepend the length of p.data to outgoing buffer
 	len := uint16(len(p.data))
-	p.data = append(make([]byte, 2), p.data...)
-	binary.BigEndian.PutUint16(p.data, len)
+	out := append(make([]byte, 2), p.data...)
+	binary.BigEndian.PutUint16(out, len)
 
-	c.Write(p.data)
+	c.Write(out)
 }
 
 

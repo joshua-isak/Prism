@@ -9,7 +9,7 @@ import (
 )
 
 // VERSION :  version number of build
-var VERSION string = "v0.3 "
+var VERSION string = "v0.4"
 
 // PORT : Port to listen for new connection on
 var PORT string = "14296"
@@ -161,6 +161,19 @@ func handleGeneralMessage(p Packet, key []byte, history *tui.Box, u *uiThing) {
 }
 
 
+// Handle the ServerDisconnect packet type
+func handleServerDisconnect(p Packet) error {
+	// be a good client and forcibly close when the server tells you to
+	p.seek = 1
+
+	errCode := int(p.ReadUint8())
+	len := p.ReadUint8()
+	reason := p.ReadString(int(len))
+
+	return errors.New("Server forced this client to disconnect. Reason " + string(errCode) + ": " + reason)
+}
+
+
 
 // Connection : Listen for packets from the server and handle them
 func Connection(conn net.Conn, clients map[string]string, k []byte, username string, h *tui.Box, c *tui.List, u *uiThing) error {
@@ -176,7 +189,8 @@ func Connection(conn net.Conn, clients map[string]string, k []byte, username str
 		// Read in data from tcp socket and put it in a Packet object
 		p, err := ReadSocket(conn)
 		if err != nil {
-			return err
+			return nil	// this error is mostlikely a "use of closed network connection" anyway right....
+			//return err
 		}
 
 		// Handle this packet based on the packet type
@@ -186,6 +200,9 @@ func Connection(conn net.Conn, clients map[string]string, k []byte, username str
 
 		case Welcome:
 			handleWelcome(p, clients, u, c)
+
+		case ServerDisconnect:
+			return handleServerDisconnect(p)
 
 		case ClientConnect:
 			handleClientConnect(p, clients, u, c, username, h)
@@ -211,7 +228,7 @@ func main() {
 	address, username, key := loginUI()
 
 	// Open a TCP connection to the server 			//TODOmaybe put this in the loginUI?
-	fmt.Println("Attemping to connect to:", address)
+	//fmt.Println("Attemping to connect to:", address)
 	connection, err := net.Dial("tcp", address + ":" + PORT)
 	if err != nil {
 		fmt.Println(err)
@@ -240,6 +257,7 @@ func main() {
 
 	if err != nil {
 		fmt.Println(err)
+		time.Sleep(10 * time.Second) 	// Let that error really sink in...
 	}
 
 }
