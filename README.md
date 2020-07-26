@@ -29,9 +29,12 @@ PP uses the concept of "packet types" to divide communications into discrete fun
 
 - Initial
 - Welcome
+- ServerDisconnect
 - ClientConnect
 - ClientDisconnect
-- General Message
+- GeneralMessage
+
+**Before the packet type byte, there are two bytes that form a uint16 which designate the size of the data to be read from the tcp buffer. This suffix exists before each communication between the client and server. A good implementation will read these two bytes (unsigned x) from the tcp buffer, then read in x bytes and handle the "packet" from there.**
 
 ### Initial [1]
 
@@ -39,7 +42,7 @@ After establishing a TCP connection to the server, the first thing a client send
 
 Once the Initial packet is sent the server will make sure the client's version is compatible, and that the data sent makes sense. If either of those cases are not true then the client will be disconnected.
 
-NOTE: PP uses little endian byte ordering
+NOTE: PP uses big endian byte ordering
 
 | Byte # | Details |
 | ------ | ------- |
@@ -64,27 +67,38 @@ NOTE: Bytes 1 and onward can be empty if there are no users connected to the ser
 |x + 2 to y | The username encoded in UTF-8 |
 | . . . | And so on... |
 
-### ClientConnect [3]
+### ServerDisconnect [3]
+
+For whatever reason the server may notify that client that it has been disconnected from the server for a non tranport layer reason, such as the server chatroom being full, or the client's username already being in use. This packet will arrive right before the tcp connection is closed, and contains an error code, as well as a reason for the disconnect as a UTF-8 string.
+
+| Byte # | Details |
+| ------ | ------- |
+| 0 | The packet type 3 (0x3) |
+| 1 | Disconnect reason code (uint8) |
+| 2 | The length x of a plaintext disconnect reason (uint8) |
+| 3 to x | The disconnect reason encoded in UTF-8 |
+
+### ClientConnect [5]
 
 When a new client connects to the server, the server sends a ClientConnect packet to inform each connected client that a new client has connected. This packet type contains the length of the client's username, and the username itself.
 
 | Byte # | Details |
 | ------ | ------- |
-| 0 | The packet type 3 (0x3) |
+| 0 | The packet type 3 (0x5) |
 | 1 | The length of the username (uint8) |
 | 2 to 22 | The username encoded in UTF-8 |
 
-### ClientDisconnect [4]
+### ClientDisconnect [6]
 
 When a client disconnects from the server, the server sends a ClientDisconnect packet to inform each connected client that a client has disconnected. Packet structure is the same as ClientConnect, albeit with a different value for the first byte.
 
 | Byte # | Details |
 | ------ | ------- |
-| 0 | The packet type 4 (0x4) |
+| 0 | The packet type 4 (0x6) |
 | 1 | The length of the username (uint8) |
 | 2 to 22| The username encoded in UTF-8 |
 
-### GeneralMessage [5]
+### GeneralMessage [20]
 
 Once the Welcome packet is received by the client, it can begin sending messages to the server that will be sent to all clients in the room using the GeneralMessage packet type. The server will also send this same packet type back to the client to inform it of messages sent from other users connected to the server.
 
@@ -96,7 +110,7 @@ NOTE III: Messages are encrypted using 256-bit AES
 
 | Byte # | Details |
 | ------ | ------- |
-| 0 | The packet type 5 (0x5) |
+| 0 | The packet type 20 (0x14) |
 | 1 | The length of the username (uint8) |
 | 2 to 22 | The username encoded in UTF-8 |
 | 23 | A boolean, true if the message is encrypted |

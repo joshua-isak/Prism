@@ -79,7 +79,7 @@ func loginUI() (string, string, []byte){
 			return
 		}
 
-		//Use a predefined key if 'debug' in input into the key field, ignores check below
+		//Use a predefined key if 'debug' is input into the key field, ignores check below
 		if key.Text() == "debug" { key.SetText("jjjjjjjjkkkkkkkkhhhhhhhhiiiiiiii") }
 
 		// Make sure the key is 32 bytes long

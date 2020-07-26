@@ -54,7 +54,7 @@ func handleConnection(connection net.Conn, id int) {
 	w.PrintDataHex()
 	w.Send(connection)
 
-	// Temporary fix due to the fact that the client reads too many bytes from the tcp socket!!!!!!!!!
+	// Temporary fix due to the fact that the client reads too many bytes from the tcp socket!!!!!!111
 	time.Sleep(1 * time.Second)
 
 	// Add the client to the clients map
@@ -64,7 +64,6 @@ func handleConnection(connection net.Conn, id int) {
 	cC := NewPacket(ClientConnect)
 	cC.PrepClientConnect(name)
 	cC.Broadcast(clients)
-	//cC.PrintDataHex()
 
 	fmt.Println(name + " has connected")
 
@@ -82,7 +81,7 @@ func handleConnection(connection net.Conn, id int) {
 		}
 
 		// Close the connection if the client doesn't respond with the "GeneralMessage" packet type
-		if buf[0] != 5 {
+		if PacketType(buf[0]) != GeneralMessage {
 			connection.Close()
 			fmt.Println("client sent bad data (GeneralMessage)")
 			break
@@ -99,7 +98,6 @@ func handleConnection(connection net.Conn, id int) {
 		// Broadcast this received message to all other connected clients
 		p := NewPacket(GeneralMessage)
 		p.PrepGeneralMessage(name, message, true)
-		//p.PrintDataHex()
 		p.Broadcast(clients)
 
 		fmt.Println(name + ": --ENCRYPTED--")
@@ -107,13 +105,6 @@ func handleConnection(connection net.Conn, id int) {
 	}
 
 	// Handle the TCP connection closing
-	//msg := name + " has disconnected" // := not used because var msg previously declared
-	//fmt.Println(msg)
-
-	//p2 := NewPacket(GeneralMessage)
-	//p2.PrepGeneralMessage("", []byte(msg), false)
-	//p2.Broadcast(clients)
-
 	connection.Close()
 	delete(clients, name)
 
@@ -129,15 +120,7 @@ func handleConnection(connection net.Conn, id int) {
 
 
 func main() {
-	// Read in command line arguments
-	//arguments := os.Args
-	//if len(arguments) == 1 {
-	//	fmt.Println("Usage: prism-server [port]")
-	//	return
-	//}
-
 	// Listen for new TCP connections
-	//PORT := ":" + arguments[1]
 	listener, err := net.Listen("tcp", ":" + PORT)
 	if err != nil {
 		fmt.Println(err)
@@ -155,9 +138,6 @@ func main() {
 		}
 
 		go handleConnection(connection, countID)
-		// Add client id info
-		//clients[countID] = connection
-		//countID++
 
 	}
 

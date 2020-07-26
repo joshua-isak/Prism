@@ -18,53 +18,6 @@ var PORT string = "14296"
 var clients = make(map[string]string)
 
 
-// Basically Handle the GeneralMessage packet type
-// func handleConnection(connection net.Conn, key []byte, history *tui.Box, u *uiThing) error {
-// 	defer connection.Close()
-// 	for {
-// 		// Read in data from tcp socket and put it in a Packet object
-// 		buf := make([]byte, 1024)	// read up to 1024 bytes into buf
-// 		_, err := connection.Read(buf[0:])	// read up to size of buf
-// 		if err != nil {
-// 			return err
-// 		}
-// 		netData := NewPacket(Received)
-// 		netData.data = buf
-
-// 		// Close connection if server didn't send a GeneralMessage PacketType
-// 		pType := netData.ReadUint8()
-// 		if pType != 5 { return errors.New("Server sent bad data (GeneralMessage)") }
-
-// 		l := netData.ReadUint8()						// read in the senderName length
-// 		senderName := netData.ReadString(int(l))		// read in the senderName as a string
-
-// 		// Check if the message is encrypted
-// 		netData.seek = 23
-// 		isEncrypted := netData.ReadBool()
-
-// 		// Read in the message as a byte array
-// 		messageSize := netData.ReadUint8()
-// 		message := netData.ReadBytes(int(messageSize))
-
-// 		// Decrypt the message if it is encrypted
-// 		if isEncrypted {
-// 			message = decrypt(message, key)
-// 		}
-
-// 		// Print message using textUI ;)
-// 		u.ui.Update( func(){
-// 			history.Append(tui.NewHBox(
-// 				tui.NewLabel(time.Now().Format("15:04")),
-// 				tui.NewPadder(1, 0, tui.NewLabel(fmt.Sprintf("<%s>", senderName))),
-// 				tui.NewLabel(string(message)),
-// 				tui.NewSpacer(),
-// 			))
-// 		})
-
-// 	}
-// }
-
-
 // Handle the Welcome packet type
 func handleWelcome(p Packet, clients map[string]string, u *uiThing, clientList *tui.List) {
 	p.seek = 1
@@ -82,19 +35,19 @@ func handleWelcome(p Packet, clients map[string]string, u *uiThing, clientList *
 		name := p.ReadString(l)
 
 		// Add the username to the clients map
-		clients[name] = name	// I really only want the map to be a array I can remove values from by name :^)
+		clients[name] = name	// I really only want the map to be a array I can remove values from it by name :^)
 	}
 
 	// Update the connected clients list in the chatUI
 	u.ui.Update(func(){
-		// Iterate over the map of clients and add them to the clientList
+		// Iterate over the map of clients and add their names to the clientList
 		for _, y := range clients {
 			clientList.AddItems(y)
-			//clientList.AddItems("User")
 		}
 	})
 
 }
+
 
 // Handle the ClientConnect packet type
 func handleClientConnect(p Packet, clients map[string]string, u *uiThing, clientList *tui.List, username string, history *tui.Box) {
@@ -120,10 +73,9 @@ func handleClientConnect(p Packet, clients map[string]string, u *uiThing, client
 		// Refresh list by removing all its items then adding them back (this is a workaround to the tui library :/)
 		clientList.RemoveItems()
 
-		// Iterate over the map of clients and add them to the clientList
+		// Iterate over the map of clients and add their names to the clientList
 		for _, y := range clients {
 			clientList.AddItems(y)
-			//clientList.AddItems("User")
 		}
 	})
 
@@ -155,13 +107,12 @@ func handleClientDisconnect(p Packet, clients map[string]string, u *uiThing, cli
 
 	// Update the connected clients list in the chatUI
 	u.ui.Update(func(){
-		// Refresh list by removing all its items then adding them back (this is a workaround to the tui library :/)
+		// Refresh list by removing all its items then adding them back again from the now updated map clients
 		clientList.RemoveItems()
 
 		// Iterate over the map of clients and add them to the clientList
 		for _, y := range clients {
 			clientList.AddItems(y)
-			//clientList.AddItems("User")
 		}
 	})
 
@@ -216,9 +167,9 @@ func Connection(conn net.Conn, clients map[string]string, k []byte, username str
 	defer conn.Close()
 
 	// Send the Initial packet to the server
-	i := NewPacket(Initial)
-	i.PrepInitial(username)
-	i.Send(conn)
+	init := NewPacket(Initial)
+	init.PrepInitial(username)
+	init.Send(conn)
 
 	// Listen for and handle packets received from the server
 	for {
@@ -249,7 +200,7 @@ func Connection(conn net.Conn, clients map[string]string, k []byte, username str
 			handleGeneralMessage(p, k, h, u)
 
 		default:
-			return errors.New("Server sent an invalid packet type")
+			return errors.New("Received an invalid packet type")
 
 		}
 	}
@@ -263,6 +214,7 @@ func main() {
 	address, username, key := loginUI()
 
 	// Open a TCP connection to the server 			//TODOmaybe put this in the loginUI?
+	fmt.Println("Attemping to connect to:", address)
 	connection, err := net.Dial("tcp", address + ":" + PORT)
 	if err != nil {
 		fmt.Println(err)
@@ -280,17 +232,10 @@ func main() {
 
 	// Give some time for chatUI to initialize
 	// chat UI not finishing init before printServerMessage runs WILL CAUSE A PANIC
+	// TODO add some real blocking here with channels!
 	time.Sleep(1 * time.Second)
 
-	// Send the Initial packet to the server
-	//p := NewPacket(Initial)
-	//p.PrepInitial(username)
-	//p.Send(connection)
-
 	// Handle GeneralMessage packets from the server
-	// This function blocks until the connection to the server is closed
-
-	//err = handleConnection(connection, key, history, &u)
 	err = Connection(connection, clients, key, username, history, clientList, &u)
 
 	// Close the chat UI

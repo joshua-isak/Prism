@@ -8,23 +8,14 @@ import (
 
 
 func chatUI(username string, c net.Conn, key []byte, history *tui.Box, users *tui.List, address string, u *uiThing) {
-	//users := tui.NewList()
-	//users.AddItems("hi", "bye", "hi", "hi","hi","hi","hi","hi")
-	//users.RemoveItem(2)
 
 	sidebar := tui.NewVBox(
-		//tui.NewLabel(" CONNECTED: "),
 		tui.NewPadder(1, 0, tui.NewLabel(" CONNECTED: ")),
-		//tui.NewPadder(1, 0, tui.NewLabel("")),
 		tui.NewPadder(1, 1, users),
 		tui.NewSpacer(),
-
-		//tui.NewPadder(1, 0, users),
-		//users,
 	)
 	sidebar.SetBorder(true)
 
-	// TEST
 	topInfo := tui.NewStatusBar("  Prism goClient " + VERSION + "  |  Server: " + address + "  |  Username: " + username + "  |  " +  "Press esc to quit")
 
 	historyScroll := tui.NewScrollArea(history)
