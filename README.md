@@ -2,6 +2,8 @@
 
 An End to End encrypted chat room written in go with a custom communication protol (Prism Protocol) that allows for cross platform client development.
 
+![Screenshot](screenshot.png)
+
 ## Getting Started
 
 Simply download the binary relevant to your operating system and run it!
@@ -16,6 +18,8 @@ Alongside a client you'll of course need a server to connect to. Be sure to grab
 [Windows 10 64-bit](https://github.com/joshua-isak/Prism/blob/master/prism-client/prism-client.exe)
 
 [Linux 64-bit](https://github.com/joshua-isak/Prism/blob/master/prism-client/prism-client)
+
+[OSX 64-bit](https://github.com/joshua-isak/Prism/blob/master/prism-client/prism-osx-client)
 
 #### Server
 
@@ -36,13 +40,13 @@ PP uses the concept of "packet types" to divide communications into discrete fun
 
 **Before the packet type byte, there are two bytes that form a uint16 which designate the size of the data to be read from the tcp buffer. This suffix exists before each communication between the client and server. A good implementation will read these two bytes (unsigned x) from the tcp buffer, then read in x bytes and handle the "packet" from there.**
 
+**Also note that PP uses network byte order**
+
 ### Initial [1]
 
 After establishing a TCP connection to the server, the first thing a client sends to the server is an "Initial" type packet. This packet contains the packet type (1 for the Initial type), the length of the client's username, the client's username, as well as the client's version. If the client doesn't send this packet within 20 seconds the TCP connection is closed.
 
 Once the Initial packet is sent the server will make sure the client's version is compatible, and that the data sent makes sense. If either of those cases are not true then the client will be disconnected.
-
-NOTE: PP uses big endian byte ordering
 
 | Byte # | Details |
 | ------ | ------- |
