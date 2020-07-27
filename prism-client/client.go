@@ -9,7 +9,7 @@ import (
 )
 
 // VERSION :  version number of build
-var VERSION string = "v0.4"
+var VERSION string = "v0.4.1"
 
 // PORT : Port to listen for new connection on
 var PORT string = "14296"
@@ -224,35 +224,78 @@ func Connection(conn net.Conn, clients map[string]string, k []byte, username str
 
 
 func main() {
-	// Get login information from the login UI
-	address, username, key := loginUI()
+	// Init some ui variables
+	var u uiThing
+	loginInfo := make(chan []string)
 
-	// Open a TCP connection to the server 			//TODOmaybe put this in the loginUI?
-	//fmt.Println("Attemping to connect to:", address)
+	// Signal channels
+	startChat := make(chan int)
+
+	var address string
+	var username string
+	var key []byte
+	var connection net.Conn
+
+	// Init some widgets widget... and ui pointer thingy
+	history := tui.NewVBox()
+	clientList := tui.NewList()
+
+	// UI thread
+	go func() {
+		// Build the loginUI
+		login := loginUI(loginInfo)
+
+		// Start the ui
+		ui, _ := tui.New(login)
+		u.ui = ui
+		go ui.Run()
+
+		ui.SetKeybinding("Esc", func() {
+			ui.Quit()
+			loginInfo<-[]string{"/exit"}
+		})
+
+		// Wait for the startChat signal
+		<-startChat
+
+		// Build the chatUI
+		chat := chatUI(username, connection, key, history, clientList, address, &u)
+
+		// Change current ui to chatUI
+		u.ui.SetWidget(chat)
+
+		ui.SetKeybinding("Esc", func() {
+			ui.Quit()
+			connection.Close()
+		})
+
+	}()
+
+	// Get login information from the loginUI
+	i := <- loginInfo
+
+	if i[0] == "/exit" {
+		return		// close the program if loginUI sends this string
+	}
+
+	address, username, key = i[0], i[1], []byte(i[2])
+
+	// Open a TCP connection to the server
 	connection, err := net.Dial("tcp", address + ":" + PORT)
 	if err != nil {
+		u.ui.Quit()
 		fmt.Println(err)
 		time.Sleep(10 * time.Second)	// Let that error really sink in...
 		return
 	}
 
-	// Init some widgets widget... and ui pointer thingy
-	history := tui.NewVBox()
-	clientList := tui.NewList()
-	var u uiThing
-
-	// Init the chat UI
-	go chatUI(username, connection, key, history, clientList, address, &u)
-
-	// Give some time for chatUI to initialize
-	// chat UI not finishing init before printServerMessage runs WILL CAUSE A PANIC
-	// TODO add some real blocking here with channels!
-	time.Sleep(1 * time.Second)
+	// send the startchat signal
+	close(startChat)
 
 	// Handle GeneralMessage packets from the server
 	err = Connection(connection, clients, key, username, history, clientList, &u)
 
-	// Close the chat UI
+	// Close the UI
 	u.ui.Quit()
 
 	if err != nil {

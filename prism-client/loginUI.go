@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	//"log"
 	"github.com/marcusolsson/tui-go"
 )
 
@@ -17,7 +17,7 @@ $$ |      $$ |      $$ |$$$$$$$  |$$ | $$ | $$ |
  by joshua-isak                     client ` + VERSION
 
 
-func loginUI() (string, string, []byte){
+func loginUI(loginInfo chan []string) tui.Widget {
 
 	server := tui.NewEntry()
 	server.SetFocused(true)
@@ -62,13 +62,6 @@ func loginUI() (string, string, []byte){
 
 	tui.DefaultFocusChain.Set(server, user, key, login)
 
-	ui, err := tui.New(root)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ui.SetKeybinding("Esc", func() { ui.Quit() })
-
 	login.OnActivated(func(b *tui.Button) {
 		// Make sure the username is not longer than 20 characters
 		if len(user.Text()) > 20 {
@@ -91,14 +84,26 @@ func loginUI() (string, string, []byte){
 			return
 		}
 
-		status.SetText("Logged in!")
-		ui.Quit()
+		loginInfo <- []string{server.Text(), user.Text(), key.Text()}
+		close(loginInfo)
+		//status.SetText("Logged in!")
+		//ui.Quit()
+
 	})
 
-	if err := ui.Run(); err != nil {
-		log.Fatal(err)
-	}
+	//ui, err := tui.New(root)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 
-	return server.Text(), user.Text(), []byte(key.Text())
+	//ui.SetKeybinding("Esc", func() { ui.Quit() })
+
+
+
+	//if err := ui.Run(); err != nil {
+	//	log.Fatal(err)
+	//}
+
+	return root
 
 }

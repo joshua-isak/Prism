@@ -2,12 +2,12 @@ package main
 
 import (
 	"github.com/marcusolsson/tui-go"
-	"log"
+	//"log"
 	"net"
 )
 
 
-func chatUI(username string, c net.Conn, key []byte, history *tui.Box, users *tui.List, address string, u *uiThing) {
+func chatUI(username string, c net.Conn, key []byte, history *tui.Box, users *tui.List, address string, u *uiThing) tui.Widget {
 
 	sidebar := tui.NewVBox(
 		tui.NewPadder(1, 0, tui.NewLabel(" CONNECTED: ")),
@@ -61,20 +61,22 @@ func chatUI(username string, c net.Conn, key []byte, history *tui.Box, users *tu
 	root := tui.NewHBox(sidebar, chat)
 	root = tui.NewVBox(topInfo, root)
 
-	ui, err := tui.New(root)
-	if err != nil {
-		log.Fatal(err)
-	}
+	//ui, err := tui.New(root)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 
 	// Pointers :(
-	u.ui = ui
+	//u.ui = ui
 
-	ui.SetKeybinding("Esc", func() {
-		c.Close()
-	})
+	//ui.SetKeybinding("Esc", func() {
+	//	c.Close()
+	//})
+	//
+	//if err := ui.Run(); err != nil {
+	//	log.Fatal(err)
+	//}
 
-	if err := ui.Run(); err != nil {
-		log.Fatal(err)
-	}
+	return root
 
 }
