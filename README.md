@@ -1,6 +1,6 @@
 # Prism
 
-An End to End encrypted chat room written in go with a custom communication protol (Prism Protocol) that allows for cross platform client development.
+An End to End encrypted chat room client and server.
 
 ![Screenshot](screenshot.png)
 
